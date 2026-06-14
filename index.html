@@ -191,7 +191,6 @@
         <div id="bank"></div>
     </div>
 </div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/drag-drop-touch/1.14.0/drag-droptouch.js"></script>
 <script>
     let step = 1;
@@ -201,7 +200,10 @@
     const levelTargets = { 1: 2, 2: 3 };
     let config = { isPerfectSquare: false, structureType: 0, valA: 0, valB: 0, sign: '>', c1: 0, c2: 0, calculatedProductSigns: [] };
     
-    // Level 2 sequence tracking variables to guarantee a repeated root variant
+    // Mobile selection state
+    let selectedMobileValue = null;
+    let selectedMobileType = null;
+    
     let level2QuestionCount = 0;
     let level2PerfectSquareServed = false;
 
@@ -230,6 +232,7 @@
         levelScore = 0;
         level2QuestionCount = 0;
         level2PerfectSquareServed = false;
+        clearMobileSelection();
         
         document.getElementById('completion-overlay').style.display = "none";
         document.getElementById('status-bar-container').style.visibility = "visible";
@@ -259,14 +262,12 @@
         } else {
             level2QuestionCount++;
             
-            // Forces the final question or a random early roll to guarantee an a=b variant
             if ((level2QuestionCount === 3 && !level2PerfectSquareServed) || (Math.random() < 0.50 && !level2PerfectSquareServed)) {
                 b = a;
                 config.isPerfectSquare = true;
                 type = getRandomInt(0, 3);
                 level2PerfectSquareServed = true;
             } else {
-                // Otherwise choose complex inverted parameters (a != b)
                 while (a === b) {
                     b = getRandomInt(-10, 10);
                 }
@@ -336,6 +337,7 @@
     function buildGameSpace() {
         step = 1;
         document.getElementById('next-action-container').style.display = "none";
+        clearMobileSelection();
         
         let f1Str = formatFactorString(config.valA, (config.structureType === 1 || config.structureType === 3));
         let f2Str = formatFactorString(config.valB, (config.structureType === 2 || config.structureType === 3));
@@ -343,7 +345,7 @@
         document.getElementById('game-equation-title').innerHTML = `Solving ${f1Str}${f2Str} ${formatSignSymbol(config.sign)} 0`;
 
         document.getElementById('step-title').innerText = "Step 1: Critical Points";
-        document.getElementById('instruction').innerText = config.isPerfectSquare ? "This equation has one repeated root. Find it and drag it to the line." : "Find the values of x where the equation equals 0. Drag them to the line.";
+        document.getElementById('instruction').innerText = config.isPerfectSquare ? "Tap a number to select it, then tap the line zone." : "Tap a number to select it, then tap the line zones.";
         document.getElementById('message').innerText = "";
         document.getElementById('final-step').style.display = "none";
         
@@ -547,28 +549,57 @@
         container.innerHTML = html;
     }
 
+    function clearMobileSelection() {
+        selectedMobileValue = null;
+        selectedMobileType = null;
+        document.querySelectorAll('.draggable').forEach(d => d.style.outline = "none");
+    }
+
     function listen() {
         document.querySelectorAll('.draggable').forEach(d => {
+            // Desktop Drag support
             d.ondragstart = (e) => e.dataTransfer.setData('text', e.target.innerText);
+            
+            // Mobile Click-to-Select Support
+            d.onclick = (e) => {
+                e.stopPropagation();
+                clearMobileSelection();
+                selectedMobileValue = e.target.innerText;
+                selectedMobileType = e.target.classList.contains('plus') ? 'plus' : (e.target.classList.contains('minus') ? 'minus' : 'num');
+                e.target.style.outline = "3px solid #ff5722";
+            };
         });
+    }
+
+    function handleValuePlacement(zone, incomingValue, incomingType) {
+        if (incomingValue === zone.dataset.ans) {
+            zone.innerHTML = `<div class="draggable ${incomingType}" style="margin:0; cursor:default;">${incomingValue}</div>`;
+            zone.style.border = "2px solid var(--success)";
+            document.getElementById('message').innerText = "";
+            clearMobileSelection();
+            updateFlow();
+        } else {
+            const m = document.getElementById('message');
+            m.innerText = "wrong, try again"; m.style.color = "red";
+            setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+        }
     }
 
     function bindDropZones() {
         document.querySelectorAll('.drop-zone').forEach(z => {
+            // Desktop listeners
             z.ondragover = (e) => e.preventDefault();
             z.ondrop = (e) => {
                 e.preventDefault();
                 const data = e.dataTransfer.getData('text');
-                if (data === z.dataset.ans) {
-                    const type = (data === '+' || data === '-') ? (data === '+' ? 'plus' : 'minus') : 'num';
-                    z.innerHTML = `<div class="draggable ${type}" style="margin:0; cursor:default;">${data}</div>`;
-                    z.style.border = "2px solid var(--success)";
-                    document.getElementById('message').innerText = "";
-                    updateFlow();
-                } else {
-                    const m = document.getElementById('message');
-                    m.innerText = "wrong, try again"; m.style.color = "red";
-                    setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+                const type = (data === '+' || data === '-') ? (data === '+' ? 'plus' : 'minus') : 'num';
+                handleValuePlacement(z, data, type);
+            };
+
+            // Mobile tap listener
+            z.onclick = (e) => {
+                if (selectedMobileValue !== null) {
+                    handleValuePlacement(z, selectedMobileValue, selectedMobileType);
                 }
             };
         });
@@ -582,7 +613,7 @@
         if (step === 1 && s1Done) {
             step = 2;
             document.getElementById('step-title').innerText = "Step 2: Sign Investigation";
-            document.getElementById('instruction').innerText = "Test each factor. Is the factor positive (+) or negative (-) in these regions?";
+            document.getElementById('instruction').innerText = "Tap a sign (+) or (-) in the bank, then tap the matching chart grids.";
             
             document.getElementById('row-headers').style.visibility = "visible";
             document.getElementById('label-f1').style.visibility = "visible";
@@ -595,11 +626,12 @@
         } else if (step === 2 && s2Done) {
             step = 3;
             document.getElementById('step-title').innerText = "Step 3: The Product";
-            document.getElementById('instruction').innerText = "Multiply the signs vertically to find the final product sign.";
+            document.getElementById('instruction').innerText = "Multiply signs vertically. Tap a bank sign, then tap the yellow product row.";
             document.getElementById('row-prod').style.visibility = "visible";
             document.getElementById('prod-label').style.visibility = "visible";
             listen();
         } else if (step === 3 && s3Done) {
+            document.getElementById('instruction').innerText = "Choose your final interval logic block below:";
             document.getElementById('final-step').style.display = "block";
         }
     }
@@ -609,13 +641,8 @@
         if (choice === 'CORRECT') {
             el.className = 'opt-btn is-correct';
             m.innerText = "congratulations, you are correct!"; m.style.color = "green";
-            
             levelScore++;
-            
-            // Disable all options so they can't double-click answers
             document.querySelectorAll('.opt-btn').forEach(b => b.style.pointerEvents = 'none');
-            
-            // 3. Show manual 'Next' confirmation button action setup instead of auto-loading
             document.getElementById('next-action-container').style.display = "flex";
         } else {
             m.innerText = "wrong, try again"; m.style.color = "red";
@@ -623,10 +650,8 @@
         }
     }
 
-    // 3. Triggered manually by clicking the "Next" action button block
     function advanceNextChallenge() {
         if (levelScore >= levelTargets[currentLevel]) {
-            // 5. Hide the top headers to prevent overlapping before showing full-screen completion panels
             document.getElementById('status-bar-container').style.visibility = "hidden";
             document.getElementById('game-equation-title').style.visibility = "hidden";
 
@@ -636,16 +661,14 @@
             const btn = document.getElementById('overlay-btn');
 
             if (currentLevel === 1) {
-                // 4. Completed Level 1 Celebration Panel State
                 title.innerText = "🎉 Congratulations! 🎉";
                 desc.innerText = "You have successfully completed Level 1!";
                 btn.innerText = "Advance to Level 2";
                 overlay.style.display = "flex";
             } else {
-                // Completed Level 2 (Entire Game Victory Panel State)
                 title.innerText = "🏆 Grand Champion! 🏆";
                 desc.innerText = "You have completely mastered Quadratic Inequalities!";
-                btn.innerText = "Play Again ↺";
+                btn.innerText = "Play Again 😄";
                 overlay.style.display = "flex";
             }
         } else {
@@ -653,7 +676,6 @@
         }
     }
 
-    // Handles the overlay's button action deliberately
     function handleOverlayAction() {
         if (currentLevel === 1 && levelScore >= levelTargets[1]) {
             currentLevel = 2;
@@ -668,6 +690,9 @@
             resetWholeGame();
         }
     }
+
+    // Cancel selection if tapping whitespace
+    document.body.onclick = () => clearMobileSelection();
 
     resetWholeGame();
 </script>

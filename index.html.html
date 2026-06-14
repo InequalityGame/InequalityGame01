@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inequality Game - Level Edition</title>
+    <style>
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --plus: #ff9800;
+            --minus: #9c27b0;
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f0f2f5; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 10px; 
+            margin: 0; 
+            overflow-x: hidden; 
+        }
+
+        /* 1. Topmost Header: Status Panel */
+        .status-panel {
+            display: flex;
+            gap: 20px;
+            background: #2563eb;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 30px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+            font-size: 1.05rem;
+        }
+        
+        /* 1. Second Topmost Header: The Equation */
+        .main-title { margin: 5px 0 15px 0; color: #333; font-size: 1.5rem; }
+
+        .game-container { 
+            background: white; padding: 15px 25px; border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            display: flex; gap: 20px; width: 880px;
+            align-items: flex-start;
+            position: relative;
+        }
+        
+        .main-area { flex: 1; text-align: center; }
+        
+        .table-layout { 
+            display: inline-grid;
+            grid-template-columns: 120px 540px;
+            position: relative;
+        }
+
+        .label-stack { display: flex; flex-direction: column; text-align: left; font-weight: bold; color: var(--primary); }
+        .label-stack div { height: 66px; display: flex; align-items: center; padding-left: 10px; box-sizing: border-box; visibility: hidden; }
+        .label-stack div.always-hidden { visibility: hidden !important; }
+
+        .grid-area { border-collapse: collapse; width: 540px; table-layout: fixed; }
+        .grid-area td { border: 1px solid #ddd; height: 66px; vertical-align: middle; text-align: center; box-sizing: border-box; }
+        
+        #instruction { color: #555; margin-bottom: 10px; font-size: 0.95rem; font-weight: 500; }
+
+        .drop-zone { 
+            width: 46px; height: 46px; border: 2px dashed #bbb; border-radius: 10px; 
+            background: #fff; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto;
+        }
+
+        .number-line-row { display: contents; }
+        .axis-line { position: absolute; width: 540px; height: 3px; background: #333; top: 198px; left: 120px; z-index: 10; }
+        
+        .marker-wrapper { 
+            position: absolute; top: 183px; transform: translateX(-50%); 
+            display: flex; flex-direction: column; align-items: center; width: 60px; z-index: 20;
+        }
+        .tick { width: 3px; height: 30px; background: #333; }
+        .dz-s1 { margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-style: solid; border-color: #333; }
+
+        .sidebar { width: 140px; background: #fafafa; padding: 15px; border-radius: 15px; border: 1px solid #eee; text-align: center; }
+        .draggable { 
+            width: 46px; height: 46px; color: white; display: flex; align-items: center; 
+            justify-content: center; border-radius: 8px; cursor: grab; font-weight: bold; 
+            font-size: 1rem; margin: 10px auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .draggable.num { background: var(--primary); }
+        .draggable.plus { background: var(--plus); border-radius: 50%; }
+        .draggable.minus { background: var(--minus); border-radius: 50%; }
+        
+        .product-row { background-color: #fffde7; }
+
+        #final-step { margin-top: 15px; display: none; border-top: 1px solid #eee; padding-top: 10px; text-align: left; }
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .opt-btn { padding: 10px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; font-size: 0.85rem; background: white; text-align: center; }
+        .opt-btn:hover { background: #f0f7ff; border-color: var(--primary); }
+        .is-correct { background: #e8f5e9 !important; border-color: var(--success) !important; color: var(--success); font-weight: bold; }
+
+        #message { height: 30px; margin-top: 15px; font-weight: bold; font-size: 1.1rem; }
+
+        /* Navigation Action Buttons */
+        .action-container { margin-top: 15px; display: none; justify-content: center; }
+        .action-btn {
+            background: #2563eb; color: white; border: none; padding: 12px 30px;
+            border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.2s;
+        }
+        .action-btn:hover { background: #1d4ed8; }
+
+        /* 4. Overlay Popups for Level Completion / Full Game Win */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; border-radius: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; display: none; text-align: center;
+        }
+        .overlay-screen h2 { color: var(--success); font-size: 2.2rem; margin: 0 0 10px 0; }
+        .overlay-screen p { font-size: 1.2rem; color: #555; margin: 0 0 25px 0; }
+
+        @media (max-width: 920px) {
+            .game-container { transform: scale(0.42); transform-origin: top center; margin-top: -10px; margin-bottom: -480px; }
+            .main-title { font-size: 1.1rem; }
+            body { padding: 5px; }
+        }
+        @media (min-width: 450px) and (max-width: 920px) {
+            .game-container { transform: scale(0.65); margin-bottom: -280px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="status-panel" id="status-bar-container">
+    <span id="current-level-display">Level 1</span>
+    <span id="score-display">Progress: 0/2 Correct</span>
+</div>
+
+<h1 class="main-title" id="game-equation-title">Solving Inequality</h1>
+
+<div class="game-container">
+    
+    <div class="overlay-screen" id="completion-overlay">
+        <h2 id="overlay-title">🎉 Congratulations! 🎉</h2>
+        <p id="overlay-desc">You completed Level 1!</p>
+        <button class="action-btn" id="overlay-btn" onclick="handleOverlayAction()">Next Level</button>
+    </div>
+
+    <div class="main-area">
+        <h2 id="step-title" style="margin:0; font-size: 1.1rem; color: #1a73e8;">Step 1: Critical Points</h2>
+        <p id="instruction">Find the values of x where the equation equals 0. Drag them to the line.</p>
+
+        <div class="table-layout">
+            <div class="label-stack">
+                <div class="always-hidden">Header</div>
+                <div id="label-f1">Factor 1</div>
+                <div id="label-f2">Factor 2</div>
+                <div id="prod-label">Product</div>
+            </div>
+
+            <div>
+                <table class="grid-area">
+                    <tr id="row-headers" style="background: #f9f9f9; font-size: 0.85rem; font-weight: bold; height: 66px; visibility: hidden;"></tr>
+                    <tr id="row-f1" style="visibility:hidden"></tr>
+                    <tr id="row-f2" style="visibility:hidden"></tr>
+                    
+                    <tr class="number-line-row">
+                        <td id="number-line-td" style="border: none; padding: 0; height: 0;"></td>
+                    </tr>
+
+                    <tr id="row-prod" class="product-row" style="visibility:hidden"></tr>
+                </table>
+            </div>
+        </div>
+
+        <div id="final-step">
+            <p style="margin:0; font-weight: bold;" id="final-step-prompt">Step 4: Select the final solution set:</p>
+            <div class="opt-grid" id="options-container"></div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="action-container" id="next-action-container">
+            <button class="action-btn" id="main-action-btn" onclick="advanceNextChallenge()">Next</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h4 style="margin:0; font-size: 0.8rem; color: #888;">BANK</h4>
+        <div id="bank"></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/drag-drop-touch/1.14.0/drag-droptouch.js"></script>
+<script>
+    let step = 1;
+    let currentLevel = 1;
+    let levelScore = 0;
+    
+    const levelTargets = { 1: 2, 2: 3 };
+    let config = { isPerfectSquare: false, structureType: 0, valA: 0, valB: 0, sign: '>', c1: 0, c2: 0, calculatedProductSigns: [] };
+    
+    // Level 2 sequence tracking variables to guarantee a repeated root variant
+    let level2QuestionCount = 0;
+    let level2PerfectSquareServed = false;
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function formatFactorString(val, reverse) {
+        if (!reverse) {
+            if (val === 0) return "x";
+            return val > 0 ? `(x - ${val})` : `(x + ${Math.abs(val)})`;
+        } else {
+            if (val === 0) return "(-x)";
+            return val > 0 ? `(${val} - x)` : `(-${Math.abs(val)} - x)`;
+        }
+    }
+
+    function formatSignSymbol(s) {
+        if (s === '>=') return '&ge;';
+        if (s === '<=') return '&le;';
+        return s;
+    }
+
+    function resetWholeGame() {
+        currentLevel = 1;
+        levelScore = 0;
+        level2QuestionCount = 0;
+        level2PerfectSquareServed = false;
+        
+        document.getElementById('completion-overlay').style.display = "none";
+        document.getElementById('status-bar-container').style.visibility = "visible";
+        document.getElementById('game-equation-title').style.visibility = "visible";
+        
+        updateStatusPanel();
+        generateRandomProblem();
+    }
+
+    function updateStatusPanel() {
+        document.getElementById('current-level-display').innerText = `Level ${currentLevel}`;
+        document.getElementById('score-display').innerText = `Progress: ${levelScore}/${levelTargets[currentLevel]} Correct`;
+    }
+
+    function generateRandomProblem() {
+        let a = getRandomInt(-10, 10);
+        let b = getRandomInt(-10, 10);
+        let chosenSign = ['>', '<', '>=', '<='][getRandomInt(0, 3)];
+        let type = 0;
+
+        if (currentLevel === 1) {
+            while (a === b) {
+                b = getRandomInt(-10, 10);
+            }
+            type = 0; 
+            config.isPerfectSquare = false;
+        } else {
+            level2QuestionCount++;
+            
+            // Forces the final question or a random early roll to guarantee an a=b variant
+            if ((level2QuestionCount === 3 && !level2PerfectSquareServed) || (Math.random() < 0.50 && !level2PerfectSquareServed)) {
+                b = a;
+                config.isPerfectSquare = true;
+                type = getRandomInt(0, 3);
+                level2PerfectSquareServed = true;
+            } else {
+                // Otherwise choose complex inverted parameters (a != b)
+                while (a === b) {
+                    b = getRandomInt(-10, 10);
+                }
+                config.isPerfectSquare = false;
+                type = getRandomInt(1, 3);
+            }
+        }
+
+        config.structureType = type;
+        config.valA = a;
+        config.valB = b;
+        config.sign = chosenSign;
+        config.c1 = Math.min(a, b);
+        config.c2 = Math.max(a, b);
+
+        updateStatusPanel();
+        buildDynamicTableMatrix();
+        buildGameSpace();
+    }
+
+    function buildDynamicTableMatrix() {
+        const rowHeaders = document.getElementById('row-headers');
+        const rowF1 = document.getElementById('row-f1');
+        const rowF2 = document.getElementById('row-f2');
+        const numberLineTd = document.getElementById('number-line-td');
+        const rowProd = document.getElementById('row-prod');
+
+        if (config.isPerfectSquare) {
+            rowHeaders.innerHTML = `<td style="width: 50%;">x &lt; ${config.valA}</td><td style="width: 50%;">x &gt; ${config.valA}</td>`;
+            rowF1.innerHTML = `<td><div id="f1-z1" class="drop-zone s2"></div></td><td><div id="f1-z3" class="drop-zone s2"></div></td>`;
+            rowF2.innerHTML = `<td><div id="f2-z1" class="drop-zone s2"></div></td><td><div id="f2-z3" class="drop-zone s2"></div></td>`;
+            rowProd.innerHTML = `<td><div id="prod-z1" class="drop-zone s3"></div></td><td><div id="prod-z3" class="drop-zone s3"></div></td>`;
+            
+            rowHeaders.setAttribute('colspan', '2'); rowF1.setAttribute('colspan', '2');
+            rowF2.setAttribute('colspan', '2'); rowProd.setAttribute('colspan', '2');
+            
+            numberLineTd.innerHTML = `
+                <div class="axis-line" style="left: 120px; width: 540px;"></div>
+                <div class="marker-wrapper" style="left: calc(120px + 270px);">
+                    <div class="tick"></div>
+                    <div id="tick-center" class="drop-zone dz-s1 s1"></div>
+                </div>
+            `;
+        } else {
+            rowHeaders.innerHTML = `<td>x &lt; ${config.c1}</td><td>${config.c1} &lt; x &lt; ${config.c2}</td><td>x &gt; ${config.c2}</td>`;
+            rowF1.innerHTML = `<td><div id="f1-z1" class="drop-zone s2"></div></td><td><div id="f1-z2" class="drop-zone s2"></div></td><td><div id="f1-z3" class="drop-zone s2"></div></td>`;
+            rowF2.innerHTML = `<td><div id="f2-z1" class="drop-zone s2"></div></td><td><div id="f2-z2" class="drop-zone s2"></div></td><td><div id="f2-z3" class="drop-zone s2"></div></td>`;
+            rowProd.innerHTML = `<td><div id="prod-z1" class="drop-zone s3"></div></td><td><div id="prod-z2" class="drop-zone s3"></div></td><td><div id="prod-z3" class="drop-zone s3"></div></td>`;
+            
+            rowHeaders.removeAttribute('colspan'); rowF1.removeAttribute('colspan');
+            rowF2.removeAttribute('colspan'); rowProd.removeAttribute('colspan');
+
+            numberLineTd.innerHTML = `
+                <div class="axis-line" style="left: 120px; width: 540px;"></div>
+                <div class="marker-wrapper" style="left: calc(120px + 540px * 0.333);">
+                    <div class="tick"></div>
+                    <div id="tick-left" class="drop-zone dz-s1 s1"></div>
+                </div>
+                <div class="marker-wrapper" style="left: calc(120px + 540px * 0.666);">
+                    <div class="tick"></div>
+                    <div id="tick-right" class="drop-zone dz-s1 s1"></div>
+                </div>
+            `;
+        }
+    }
+
+    function buildGameSpace() {
+        step = 1;
+        document.getElementById('next-action-container').style.display = "none";
+        
+        let f1Str = formatFactorString(config.valA, (config.structureType === 1 || config.structureType === 3));
+        let f2Str = formatFactorString(config.valB, (config.structureType === 2 || config.structureType === 3));
+
+        document.getElementById('game-equation-title').innerHTML = `Solving ${f1Str}${f2Str} ${formatSignSymbol(config.sign)} 0`;
+
+        document.getElementById('step-title').innerText = "Step 1: Critical Points";
+        document.getElementById('instruction').innerText = config.isPerfectSquare ? "This equation has one repeated root. Find it and drag it to the line." : "Find the values of x where the equation equals 0. Drag them to the line.";
+        document.getElementById('message').innerText = "";
+        document.getElementById('final-step').style.display = "none";
+        
+        document.getElementById('row-headers').style.visibility = "hidden";
+        document.getElementById('label-f1').style.visibility = "hidden";
+        document.getElementById('label-f2').style.visibility = "hidden";
+        document.getElementById('row-f1').style.visibility = "hidden";
+        document.getElementById('row-f2').style.visibility = "hidden";
+        document.getElementById('row-prod').style.visibility = "hidden";
+        document.getElementById('prod-label').style.visibility = "hidden";
+
+        document.getElementById('label-f1').innerText = f1Str;
+        document.getElementById('label-f2').innerText = f2Str;
+
+        if (config.isPerfectSquare) {
+            resetDropZone(document.getElementById('tick-center'), config.valA);
+        } else {
+            resetDropZone(document.getElementById('tick-left'), config.c1);
+            resetDropZone(document.getElementById('tick-right'), config.c2);
+        }
+
+        setupSignAnswers();
+        generateNumberBank();
+        generateFinalChoices();
+        bindDropZones();
+        listen();
+    }
+
+    function resetDropZone(zone, answer) {
+        if(!zone) return;
+        zone.innerHTML = "";
+        zone.dataset.ans = answer;
+        zone.style.border = "2px dashed #bbb";
+    }
+
+    function getFactorSignAtValue(val, reverse, testX) {
+        return (!reverse ? (testX - val) : (val - testX)) > 0 ? "+" : "-";
+    }
+
+    function setupSignAnswers() {
+        let f1Reverse = (config.structureType === 1 || config.structureType === 3);
+        let f2Reverse = (config.structureType === 2 || config.structureType === 3);
+
+        if (config.isPerfectSquare) {
+            let t1 = config.valA - 2;
+            let t3 = config.valA + 2;
+
+            let f1_s1 = getFactorSignAtValue(config.valA, f1Reverse, t1);
+            let f2_s1 = getFactorSignAtValue(config.valB, f2Reverse, t1);
+            let prod_s1 = (f1_s1 === f2_s1) ? "+" : "-";
+
+            let f1_s3 = getFactorSignAtValue(config.valA, f1Reverse, t3);
+            let f2_s3 = getFactorSignAtValue(config.valB, f2Reverse, t3);
+            let prod_s3 = (f1_s3 === f2_s3) ? "+" : "-";
+
+            document.getElementById('f1-z1').dataset.ans = f1_s1;
+            document.getElementById('f1-z3').dataset.ans = f1_s3;
+            document.getElementById('f2-z1').dataset.ans = f2_s1;
+            document.getElementById('f2-z3').dataset.ans = f2_s3;
+            document.getElementById('prod-z1').dataset.ans = prod_s1;
+            document.getElementById('prod-z3').dataset.ans = prod_s3;
+
+            config.calculatedProductSigns = [prod_s1, prod_s3];
+        } else {
+            let t1 = config.c1 - 2;
+            let t2 = (config.c1 + config.c2) / 2;
+            let t3 = config.c2 + 2;
+
+            let f1_s1 = getFactorSignAtValue(config.valA, f1Reverse, t1);
+            let f2_s1 = getFactorSignAtValue(config.valB, f2Reverse, t1);
+            let prod_s1 = (f1_s1 === f2_s1) ? "+" : "-";
+
+            let f1_s2 = getFactorSignAtValue(config.valA, f1Reverse, t2);
+            let f2_s2 = getFactorSignAtValue(config.valB, f2Reverse, t2);
+            let prod_s2 = (f1_s2 === f2_s2) ? "+" : "-";
+
+            let f1_s3 = getFactorSignAtValue(config.valA, f1Reverse, t3);
+            let f2_s3 = getFactorSignAtValue(config.valB, f2Reverse, t3);
+            let prod_s3 = (f1_s3 === f2_s3) ? "+" : "-";
+
+            document.getElementById('f1-z1').dataset.ans = f1_s1;
+            document.getElementById('f1-z2').dataset.ans = f1_s2;
+            document.getElementById('f1-z3').dataset.ans = f1_s3;
+
+            document.getElementById('f2-z1').dataset.ans = f2_s1;
+            document.getElementById('f2-z2').dataset.ans = f2_s2;
+            document.getElementById('f2-z3').dataset.ans = f2_s3;
+
+            document.getElementById('prod-z1').dataset.ans = prod_s1;
+            document.getElementById('prod-z2').dataset.ans = prod_s2;
+            document.getElementById('prod-z3').dataset.ans = prod_s3;
+
+            config.calculatedProductSigns = [prod_s1, prod_s2, prod_s3];
+        }
+        document.querySelectorAll('.s2, .s3').forEach(z => resetDropZone(z, z.dataset.ans));
+    }
+
+    function generateNumberBank() {
+        const bank = document.getElementById('bank');
+        let items = config.isPerfectSquare ? [config.valA, -config.valA, config.valA + 3, -config.valA - 2] : [config.c1, config.c2, -config.c1, -config.c2];
+        let distinctItems = items.filter((v, idx, self) => self.indexOf(v) === idx);
+        distinctItems.sort(() => Math.random() - 0.5);
+
+        let html = '';
+        distinctItems.forEach(num => { html += `<div class="draggable num" draggable="true">${num}</div>`; });
+        bank.innerHTML = html;
+    }
+
+    function generateFinalChoices() {
+        const container = document.getElementById('options-container');
+        const sign = config.sign;
+        const root = config.valA;
+        let options = [];
+
+        if (config.isPerfectSquare) {
+            let actualProductIsPositive = (config.calculatedProductSigns[0] === '+');
+
+            if (actualProductIsPositive) { 
+                if (sign === '>') {
+                    options = [
+                        { id: 'CORRECT', text: `All real numbers except x = ${root}` },
+                        { id: 'W1', text: `All real numbers` }, { id: 'W2', text: `x &gt; ${root}` }, { id: 'W3', text: `No solution` }
+                    ];
+                } else if (sign === '>=') {
+                    options = [
+                        { id: 'CORRECT', text: `All real numbers` },
+                        { id: 'W1', text: `All real numbers except x = ${root}` }, { id: 'W2', text: `x &ge; ${root}` }, { id: 'W3', text: `x = ${root}` }
+                    ];
+                } else if (sign === '<') {
+                    options = [
+                        { id: 'CORRECT', text: `No solution` },
+                        { id: 'W1', text: `x &lt; ${root}` }, { id: 'W2', text: `All real numbers except x = ${root}` }, { id: 'W3', text: `x = ${root}` }
+                    ];
+                } else if (sign === '<=') {
+                    options = [
+                        { id: 'CORRECT', text: `x = ${root}` },
+                        { id: 'W1', text: `No solution` }, { id: 'W2', text: `x &le; ${root}` }, { id: 'W3', text: `All real numbers` }
+                    ];
+                }
+            } else { 
+                if (sign === '>') {
+                    options = [
+                        { id: 'CORRECT', text: `No solution` },
+                        { id: 'W1', text: `x = ${root}` }, { id: 'W2', text: `All real numbers` }, { id: 'W3', text: `x &gt; ${root}` }
+                    ];
+                } else if (sign === '>=') {
+                    options = [
+                        { id: 'CORRECT', text: `x = ${root}` },
+                        { id: 'W1', text: `No solution` }, { id: 'W2', text: `All real numbers` }, { id: 'W3', text: `x &ge; ${root}` }
+                    ];
+                } else if (sign === '<') {
+                    options = [
+                        { id: 'CORRECT', text: `All real numbers except x = ${root}` },
+                        { id: 'W1', text: `All real numbers` }, { id: 'W2', text: `No solution` }, { id: 'W3', text: `x &lt; ${root}` }
+                    ];
+                } else if (sign === '<=') {
+                    options = [
+                        { id: 'CORRECT', text: `All real numbers` },
+                        { id: 'W1', text: `All real numbers except x = ${root}` }, { id: 'W2', text: `x &le; ${root}` }, { id: 'W3', text: `x = ${root}` }
+                    ];
+                }
+            }
+        } else {
+            const c1 = config.c1; const c2 = config.c2;
+            let wantsPos = (sign === '>' || sign === '>=');
+            let incEq = (sign === '>=' || sign === '<=');
+            let isOuter = (wantsPos && config.calculatedProductSigns[0] === '+') || (!wantsPos && config.calculatedProductSigns[0] === '-');
+
+            if (isOuter) {
+                if (incEq) {
+                    options = [
+                        { id: 'CORRECT', text: `x &ge; ${c2} or x &le; ${c1}` },
+                        { id: 'W1', text: `x &gt; ${c2} or x &lt; ${c1}` }, { id: 'W2', text: `${c1} &le; x &le; ${c2}` }, { id: 'W3', text: `${c1} &lt; x &lt; ${c2}` }
+                    ];
+                } else {
+                    options = [
+                        { id: 'CORRECT', text: `x &gt; ${c2} or x &lt; ${c1}` },
+                        { id: 'W1', text: `x &ge; ${c2} or x &le; ${c1}` }, { id: 'W2', text: `${c1} &lt; x &lt; ${c2}` }, { id: 'W3', text: `${c1} &le; x &le; ${c2}` }
+                    ];
+                }
+            } else {
+                if (incEq) {
+                    options = [
+                        { id: 'CORRECT', text: `${c1} &le; x &le; ${c2}` },
+                        { id: 'W1', text: `${c1} &lt; x &lt; ${c2}` }, { id: 'W2', text: `x &ge; ${c2} or x &le; ${c1}` }, { id: 'W3', text: `x &gt; ${c2} or x &lt; ${c1}` }
+                    ];
+                } else {
+                    options = [
+                        { id: 'CORRECT', text: `${c1} &lt; x &lt; ${c2}` },
+                        { id: 'W1', text: `${c1} &le; x &le; ${c2}` }, { id: 'W2', text: `x &gt; ${c2} or x &lt; ${c1}` }, { id: 'W3', text: `x &ge; ${c2} or x &le; ${c1}` }
+                    ];
+                }
+            }
+        }
+
+        options.sort(() => Math.random() - 0.5);
+        let html = ''; const labels = ['A', 'B', 'C', 'D'];
+        options.forEach((opt, idx) => {
+            html += `<div class="opt-btn" onclick="checkFinal('${opt.id}', this)">${labels[idx]}. ${opt.text}</div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function listen() {
+        document.querySelectorAll('.draggable').forEach(d => {
+            d.ondragstart = (e) => e.dataTransfer.setData('text', e.target.innerText);
+        });
+    }
+
+    function bindDropZones() {
+        document.querySelectorAll('.drop-zone').forEach(z => {
+            z.ondragover = (e) => e.preventDefault();
+            z.ondrop = (e) => {
+                e.preventDefault();
+                const data = e.dataTransfer.getData('text');
+                if (data === z.dataset.ans) {
+                    const type = (data === '+' || data === '-') ? (data === '+' ? 'plus' : 'minus') : 'num';
+                    z.innerHTML = `<div class="draggable ${type}" style="margin:0; cursor:default;">${data}</div>`;
+                    z.style.border = "2px solid var(--success)";
+                    document.getElementById('message').innerText = "";
+                    updateFlow();
+                } else {
+                    const m = document.getElementById('message');
+                    m.innerText = "wrong, try again"; m.style.color = "red";
+                    setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+                }
+            };
+        });
+    }
+
+    function updateFlow() {
+        const s1Done = Array.from(document.querySelectorAll('.s1')).every(z => z.innerText !== "");
+        const s2Done = Array.from(document.querySelectorAll('.s2')).every(z => z.innerText !== "");
+        const s3Done = Array.from(document.querySelectorAll('.s3')).every(z => z.innerText !== "");
+
+        if (step === 1 && s1Done) {
+            step = 2;
+            document.getElementById('step-title').innerText = "Step 2: Sign Investigation";
+            document.getElementById('instruction').innerText = "Test each factor. Is the factor positive (+) or negative (-) in these regions?";
+            
+            document.getElementById('row-headers').style.visibility = "visible";
+            document.getElementById('label-f1').style.visibility = "visible";
+            document.getElementById('label-f2').style.visibility = "visible";
+            document.getElementById('row-f1').style.visibility = "visible";
+            document.getElementById('row-f2').style.visibility = "visible";
+            
+            document.getElementById('bank').innerHTML = `<div class="draggable plus" draggable="true">+</div><div class="draggable minus" draggable="true">-</div>`;
+            listen();
+        } else if (step === 2 && s2Done) {
+            step = 3;
+            document.getElementById('step-title').innerText = "Step 3: The Product";
+            document.getElementById('instruction').innerText = "Multiply the signs vertically to find the final product sign.";
+            document.getElementById('row-prod').style.visibility = "visible";
+            document.getElementById('prod-label').style.visibility = "visible";
+            listen();
+        } else if (step === 3 && s3Done) {
+            document.getElementById('final-step').style.display = "block";
+        }
+    }
+
+    function checkFinal(choice, el) {
+        const m = document.getElementById('message');
+        if (choice === 'CORRECT') {
+            el.className = 'opt-btn is-correct';
+            m.innerText = "congratulations, you are correct!"; m.style.color = "green";
+            
+            levelScore++;
+            
+            // Disable all options so they can't double-click answers
+            document.querySelectorAll('.opt-btn').forEach(b => b.style.pointerEvents = 'none');
+            
+            // 3. Show manual 'Next' confirmation button action setup instead of auto-loading
+            document.getElementById('next-action-container').style.display = "flex";
+        } else {
+            m.innerText = "wrong, try again"; m.style.color = "red";
+            setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+        }
+    }
+
+    // 3. Triggered manually by clicking the "Next" action button block
+    function advanceNextChallenge() {
+        if (levelScore >= levelTargets[currentLevel]) {
+            // 5. Hide the top headers to prevent overlapping before showing full-screen completion panels
+            document.getElementById('status-bar-container').style.visibility = "hidden";
+            document.getElementById('game-equation-title').style.visibility = "hidden";
+
+            const overlay = document.getElementById('completion-overlay');
+            const title = document.getElementById('overlay-title');
+            const desc = document.getElementById('overlay-desc');
+            const btn = document.getElementById('overlay-btn');
+
+            if (currentLevel === 1) {
+                // 4. Completed Level 1 Celebration Panel State
+                title.innerText = "🎉 Congratulations! 🎉";
+                desc.innerText = "You have successfully completed Level 1!";
+                btn.innerText = "Advance to Level 2";
+                overlay.style.display = "flex";
+            } else {
+                // Completed Level 2 (Entire Game Victory Panel State)
+                title.innerText = "🏆 Grand Champion! 🏆";
+                desc.innerText = "You have completely mastered Quadratic Inequalities!";
+                btn.innerText = "Play Again ↺";
+                overlay.style.display = "flex";
+            }
+        } else {
+            generateRandomProblem();
+        }
+    }
+
+    // Handles the overlay's button action deliberately
+    function handleOverlayAction() {
+        if (currentLevel === 1 && levelScore >= levelTargets[1]) {
+            currentLevel = 2;
+            levelScore = 0;
+            
+            document.getElementById('completion-overlay').style.display = "none";
+            document.getElementById('status-bar-container').style.visibility = "visible";
+            document.getElementById('game-equation-title').style.visibility = "visible";
+            
+            generateRandomProblem();
+        } else {
+            resetWholeGame();
+        }
+    }
+
+    resetWholeGame();
+</script>
+</body>
+</html>

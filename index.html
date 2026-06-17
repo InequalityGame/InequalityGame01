@@ -25,7 +25,7 @@
 
         /* 1. Topmost Header: Status Panel */
         .status-panel {
-            display: flex;
+            display: none;
             gap: 20px;
             background: #2563eb;
             color: white;
@@ -110,12 +110,14 @@
         }
         .action-btn:hover { background: #1d4ed8; }
 
-        /* 4. Overlay Popups for Level Completion / Full Game Win */
+        /* Overlay Popups for Level Completion / Full Game Win */
         .overlay-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #ffffff; border-radius: 20px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding-top: 40px;
             z-index: 100; display: none; text-align: center;
+            box-sizing: border-box;
         }
         .overlay-screen h2 { color: var(--success); font-size: 2.2rem; margin: 0 0 10px 0; }
         .overlay-screen p { font-size: 1.2rem; color: #555; margin: 0 0 25px 0; }
@@ -135,14 +137,43 @@
 <div class="status-panel" id="status-bar-container">
     <span id="current-level-display">Level 1</span>
     <span id="score-display">Progress: 0/2 Correct</span>
+    <span id="timer-display" style="margin-left: 15px; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 15px; color: #ffeb3b;">Timer: 30s</span>
+    <span id="total-score-display" style="margin-left: 15px; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 15px;">Score: 0</span>
 </div>
 
 <h1 class="main-title" id="game-equation-title">Solving Inequality</h1>
 
 <div class="game-container">
     
+    <div class="overlay-screen" id="rules-overlay" style="display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.98); padding: 20px; overflow-y: auto; justify-content: flex-start;">
+        <h2 style="color: #2563eb; font-size: 1.8rem; margin-top: 10px;">🎮 Game Rules & Scoring</h2>
+        <p style="font-size: 1rem; max-width: 500px; color: #333; line-height: 1.5; margin-bottom: 15px;">
+            Solve the inequalities by placing critical values, investigating interval signs, and picking the final solution block! Achieve maximum speed and precision to top the leaderboard.
+        </p>
+        
+        <table style="width: 100%; max-width: 500px; margin: 0 auto 20px auto; text-align: left; border-collapse: collapse; background: #f8fafc; border-radius: 10px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);">
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: green;">⭐ Level 1 Solve</td><td style="padding: 10px; font-weight: bold; text-align: right;">+100 pts</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #9c27b0;">⭐ Level 2 Solve</td><td style="padding: 10px; font-weight: bold; text-align: right;">+200 pts</td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; font-weight: bold; color: #ff9800;">⚡ Speed Bonus</td><td style="padding: 10px; font-size: 0.9rem; text-align: right;">Up to +50 pts<br><small>(Starts at 30s countdown)</small></td></tr>
+            <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px; color: #ef4444;">❌ Drag Error (Steps 1-3)</td><td style="padding: 10px; text-align: right; color: #ef4444;">-10 pts</td></tr>
+            <tr><td style="padding: 10px; color: #b91c1c; font-weight: bold;">❌ Wrong Final Choice (Step 4)</td><td style="padding: 10px; text-align: right; color: #b91c1c; font-weight: bold;">-20 pts</td></tr>
+        </table>
+        
+        <button class="action-btn" onclick="showLevelIntro()" style="background: #22c55e; font-size: 1.2rem; padding: 15px 40px;">Next: View Level Target ➔</button>
+    </div>
+
+    <div class="overlay-screen" id="level-intro-overlay" style="display: none; flex-direction: column; background: #ffffff; padding: 30px; justify-content: center;">
+        <h2 id="intro-level-title" style="color: #2563eb; font-size: 2.2rem; margin-bottom: 5px;">Level 1 Preparation</h2>
+        <div style="background: #f1f5f9; border-radius: 15px; padding: 20px; margin: 20px auto; max-width: 500px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <p style="margin: 0 0 10px 0; font-size: 1.1rem;"><strong style="color: #334155;">📋 Target Questions:</strong> <span id="intro-question-count" style="font-weight: bold; color: #2563eb;">2 Questions</span></p>
+            <p style="margin: 0; font-size: 1.1rem;"><strong style="color: #334155;">🧠 Problem Profile:</strong> <span id="intro-problem-desc" style="color: #475569;">Standard factors with distinctive linear critical roots (e.g. $(x-a)(x-b) > 0$).</span></p>
+        </div>
+        <p style="font-size: 1rem; color: #64748b; font-style: italic; margin-bottom: 25px;">The countdown timer starts immediately once you hit the button below!</p>
+        <button class="action-btn" onclick="startLevelChallenge()" style="background: #2563eb; font-size: 1.3rem; padding: 15px 50px; border-radius: 50px;">Begin Level 🚀</button>
+    </div>
+
     <div class="overlay-screen" id="completion-overlay">
-        <h2 id="overlay-title">🎉 Congratulations! 🎉</h2>
+        <h2 id="overlay-title">🏆 Congratulations! 🏆</h2>
         <p id="overlay-desc">You completed Level 1!</p>
         <button class="action-btn" id="overlay-btn" onclick="handleOverlayAction()">Next Level</button>
     </div>
@@ -196,6 +227,9 @@
     let step = 1;
     let currentLevel = 1;
     let levelScore = 0;
+    let totalGameScore = 0;
+    let questionStartTime = 0;
+    let clockInterval = null;
     
     const levelTargets = { 1: 2, 2: 3 };
     let config = { isPerfectSquare: false, structureType: 0, valA: 0, valB: 0, sign: '>', c1: 0, c2: 0, calculatedProductSigns: [] };
@@ -230,21 +264,88 @@
     function resetWholeGame() {
         currentLevel = 1;
         levelScore = 0;
+        totalGameScore = 0;
         level2QuestionCount = 0;
         level2PerfectSquareServed = false;
         clearMobileSelection();
+        if (clockInterval) clearInterval(clockInterval);
         
         document.getElementById('completion-overlay').style.display = "none";
-        document.getElementById('status-bar-container').style.visibility = "visible";
-        document.getElementById('game-equation-title').style.visibility = "visible";
+        document.getElementById('level-intro-overlay').style.display = "none";
+        document.getElementById('status-bar-container').style.display = "none";
+        
+        // Keep hidden on the general rule landing dashboard card
+        document.getElementById('game-equation-title').style.visibility = "hidden"; 
         
         updateStatusPanel();
-        generateRandomProblem();
+        document.getElementById('rules-overlay').style.display = "flex";
     }
 
     function updateStatusPanel() {
         document.getElementById('current-level-display').innerText = `Level ${currentLevel}`;
         document.getElementById('score-display').innerText = `Progress: ${levelScore}/${levelTargets[currentLevel]} Correct`;
+        document.getElementById('total-score-display').innerText = `Score: ${totalGameScore}`;
+    }
+
+    function showLevelIntro() {
+        document.getElementById('rules-overlay').style.display = "none";
+        document.getElementById('completion-overlay').style.display = "none";
+        
+        // HIDE THE TITLE ROW ON LEVEL INTRODUCTION CARDS
+        document.getElementById('game-equation-title').style.visibility = "hidden"; 
+        
+        const introTitle = document.getElementById('intro-level-title');
+        const introCount = document.getElementById('intro-question-count');
+        const introDesc = document.getElementById('intro-problem-desc');
+        
+        if (currentLevel === 1) {
+            introTitle.innerText = "Level 1 Setup";
+            introCount.innerText = "2 Questions";
+            introDesc.innerHTML = "Standard equations with distinct real roots. The sign chart intervals will alternate consistently between positives and negatives. <br><br><strong>Example:</strong> (x &minus; 2)(x + 3) &gt; 0";
+        } else {
+            introTitle.innerText = "Level 2 Setup";
+            introCount.innerText = "3 Questions";
+            introDesc.innerHTML = "Advanced configurations! Watch out for flipped signs like <strong>(5 &minus; x)</strong>, negative coefficients, and tricky perfect square setups like <strong>(x &minus; 3)<sup>2</sup></strong> where intervals might not alternate!";
+        }
+        
+        document.getElementById('level-intro-overlay').style.display = "flex";
+    }
+
+    function startLevelChallenge() {
+        document.getElementById('level-intro-overlay').style.display = "none";
+        document.getElementById('status-bar-container').style.display = "flex"; 
+        
+        // REVEAL THE EQUATION TITLE ROW ONLY WHEN GAMEPLAY TRULY BEGINS!
+        document.getElementById('game-equation-title').style.visibility = "visible"; 
+        
+        generateRandomProblem();
+    }
+
+    function startLiveRunningClock() {
+        if (clockInterval) clearInterval(clockInterval);
+        
+        const timerDisplay = document.getElementById('timer-display');
+        timerDisplay.style.color = "#ffeb3b";
+        timerDisplay.style.fontWeight = "normal";
+        timerDisplay.innerText = "Timer: 30s";
+        
+        clockInterval = setInterval(() => {
+            let elapsedSeconds = Math.floor((Date.now() - questionStartTime) / 1000);
+            let timeLeft = 30 - elapsedSeconds;
+            
+            if (timeLeft > 0) {
+                timerDisplay.innerText = `Timer: ${timeLeft}s`;
+                if (timeLeft <= 10) {
+                    timerDisplay.style.color = "#ff4444";
+                    timerDisplay.style.fontWeight = "bold";
+                }
+            } else {
+                timeLeft = 0;
+                timerDisplay.innerText = "Bonus Expired! ⏳";
+                timerDisplay.style.color = "#ffaa00";
+                clearInterval(clockInterval);
+            }
+        }, 1000);
     }
 
     function generateRandomProblem() {
@@ -260,9 +361,7 @@
             type = 0; 
             config.isPerfectSquare = false;
         } else {
-            level2QuestionCount++;
-            
-            if ((level2QuestionCount === 3 && !level2PerfectSquareServed) || (Math.random() < 0.50 && !level2PerfectSquareServed)) {
+            if ((level2QuestionCount === 2 && !level2PerfectSquareServed) || (Math.random() < 0.45 && !level2PerfectSquareServed)) {
                 b = a;
                 config.isPerfectSquare = true;
                 type = getRandomInt(0, 3);
@@ -274,6 +373,7 @@
                 config.isPerfectSquare = false;
                 type = getRandomInt(1, 3);
             }
+            level2QuestionCount++;
         }
 
         config.structureType = type;
@@ -286,6 +386,9 @@
         updateStatusPanel();
         buildDynamicTableMatrix();
         buildGameSpace();
+        
+        questionStartTime = Date.now();
+        startLiveRunningClock();
     }
 
     function buildDynamicTableMatrix() {
@@ -580,8 +683,14 @@
             updateFlow();
         } else {
             const m = document.getElementById('message');
-            m.innerText = "wrong, try again"; m.style.color = "red";
-            setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+            m.innerText = "Wrong, try again! (-10 pts) ❌"; 
+            m.style.color = "red";
+            
+            // REMOVED Math.max(0, ...) -> Now it allows negative scores!
+            totalGameScore -= 10; 
+            updateStatusPanel();
+            
+            setTimeout(() => { if(m.innerText.includes("Wrong")) m.innerText = ""; }, 2000);
         }
     }
 
@@ -639,20 +748,47 @@
     function checkFinal(choice, el) {
         const m = document.getElementById('message');
         if (choice === 'CORRECT') {
+            // ... (keep your existing correct logic exactly as it is) ...
+            if (clockInterval) clearInterval(clockInterval);
             el.className = 'opt-btn is-correct';
-            m.innerText = "congratulations, you are correct!"; m.style.color = "green";
             levelScore++;
+            let levelMultiplier = currentLevel === 2 ? 2 : 1;
+            let pointsEarned = 100 * levelMultiplier;
+            let elapsedSeconds = Math.floor((Date.now() - questionStartTime) / 1000);
+            let timeLeft = 30 - elapsedSeconds;
+            let timeBonus = 0;
+            if (timeLeft > 0) {
+                timeBonus = Math.min(50, 10 + (timeLeft * 1.33)); 
+                timeBonus = Math.floor(timeBonus); 
+            }
+            totalGameScore += (pointsEarned + timeBonus);
+            if (timeBonus > 0) {
+                m.innerText = `Correct! +${pointsEarned} pts & +${timeBonus} Speed Bonus! 🔥`;
+            } else {
+                m.innerText = `Correct! +${pointsEarned} pts (Speed Bonus Expired)`;
+            }
+            m.style.color = "green";
+            updateStatusPanel();
             document.querySelectorAll('.opt-btn').forEach(b => b.style.pointerEvents = 'none');
             document.getElementById('next-action-container').style.display = "flex";
         } else {
-            m.innerText = "wrong, try again"; m.style.color = "red";
-            setTimeout(() => { if(m.innerText === "wrong, try again") m.innerText = ""; }, 2000);
+            m.innerText = "Incorrect choice! Try another block. (-20 pts) ❌"; 
+            m.style.color = "red";
+            
+            // REMOVED Math.max(0, ...) -> Allows negative scores on step 4 mistakes!
+            totalGameScore -= 20; 
+            updateStatusPanel();
+            
+            setTimeout(() => { if(m.innerText.includes("Incorrect")) m.innerText = ""; }, 2000);
         }
     }
 
     function advanceNextChallenge() {
         if (levelScore >= levelTargets[currentLevel]) {
-            document.getElementById('status-bar-container').style.visibility = "hidden";
+            if (clockInterval) clearInterval(clockInterval);
+            
+            // Hide the bar when showing the completion layout screens
+            document.getElementById('status-bar-container').style.display = "none";
             document.getElementById('game-equation-title').style.visibility = "hidden";
 
             const overlay = document.getElementById('completion-overlay');
@@ -661,13 +797,13 @@
             const btn = document.getElementById('overlay-btn');
 
             if (currentLevel === 1) {
-                title.innerText = "🎉 Congratulations! 🎉";
-                desc.innerText = "You have successfully completed Level 1!";
+                title.innerText = "🏆 Level 1 Complete! 🏆";
+                desc.innerHTML = `You have successfully completed Level 1!<br><br><span style="font-size: 1.5rem; color: #2563eb; font-weight: bold;">Current Score: ${totalGameScore} pts</span>`;
                 btn.innerText = "Advance to Level 2";
                 overlay.style.display = "flex";
             } else {
                 title.innerText = "🏆 Grand Champion! 🏆";
-                desc.innerText = "You have completely mastered Quadratic Inequalities!";
+                desc.innerHTML = `You have completely mastered Quadratic Inequalities!<br><br><span style="font-size: 1.8rem; color: #22c55e; font-weight: bold;">🎉 Final Score: ${totalGameScore} pts 🎉</span>`;
                 btn.innerText = "Play Again 😄";
                 overlay.style.display = "flex";
             }
@@ -681,11 +817,15 @@
             currentLevel = 2;
             levelScore = 0;
             
+            // Hide the Level 1 completion card
             document.getElementById('completion-overlay').style.display = "none";
-            document.getElementById('status-bar-container').style.visibility = "visible";
+            
+            // Keep the status bar hidden for now
+            document.getElementById('status-bar-container').style.display = "none";
             document.getElementById('game-equation-title').style.visibility = "visible";
             
-            generateRandomProblem();
+            // SHOW THE LEVEL 2 PREPARATION SCREEN INSTEAD OF JUMPING RIGHT IN
+            showLevelIntro(); 
         } else {
             resetWholeGame();
         }
